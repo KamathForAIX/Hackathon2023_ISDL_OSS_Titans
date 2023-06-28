@@ -1,0 +1,26 @@
+
+#!/bin/bash
+skip_rpms="libgcc6 libgcc7 libgcc8 libgcc11 libstdc++6 libstdc++7 libstdc++8 libstdc++11 libstdc++6-devel libstdc++7-devel libstdc++8-devel libstdc++11-devel libgomp6 libgomp7 libgomp8 libgomp11 AIX-rpm gcc6-cpp gcc7-cpp gcc8-cpp gcc11-cpp gcc6-c++ gcc7-c++ gcc8-c++ gcc11-c++"
+
+packages="glib2 bash bzip2 gzip zip unzip ncurses gcc php8 grep"
+
+for pkg in $packages
+do
+	if echo $pkg|grep devel;then
+		dependencies=`repoquery --tree --requires --recursive --resolve $pkg 2>/dev/null | sed -e 's/[| \\\_]\+\|-[[:digit:]]\+..*\|[[:digit:]]\://g'|sort|uniq`
+	else
+		dependencies=`repoquery --tree --requires --recursive --resolve $pkg 2>/dev/null | sed -e 's/[| \\\_]\+\|-[[:digit:]]\+..*\|[[:digit:]]\://g'|sort|uniq|grep -v devel`
+	fi
+	echo $pkg >>master_file
+	for dep in $dependencies
+	do
+ 		echo $skip_rpms |grep -w $dep >/dev/null 2>&1
+ 		if [[ $? -ne 0 ]]
+ 		then
+  			dep=`echo $dep|sed 's|++|plusplus|g'`
+			links=`lynx -dump alphhtml.html | egrep -o "https.*\/$dep-[0-9].*aix.*[ppc|noarch]\.rpm"`
+  			echo "$links" >> master_file
+ 		fi
+	done
+done
+sed -i "s|https|  https|g" master_file
